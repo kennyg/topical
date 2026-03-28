@@ -52,6 +52,24 @@ pnpm preview  # preview the production build locally
 | `GH_TOKEN` | GitHub personal access token | Auto-detected from `gh auth token` in dev |
 | `GH_API_URL` | GitHub API base URL | `https://api.github.com` |
 | `GH_HOST` | GitHub Enterprise hostname (alternative to `GH_API_URL`) | — |
+| `DATA_MODE` | `api` (live) or `static` (pre-fetched JSON) | `api` |
+
+### Static data mode
+
+Instead of hitting the GitHub API from the browser, you can pre-fetch topic data into JSON files and serve them statically. This is ideal for GHE instances where browser-side API calls may not work.
+
+```sh
+# 1. Fetch data (uses your gh token and GH_API_URL if set)
+pnpm fetch-data
+
+# 2. Run or build in static mode
+DATA_MODE=static pnpm dev
+DATA_MODE=static pnpm build
+```
+
+The fetcher reads `topics.json` at the repo root to decide which topics to fetch. Edit that file to customize the topic list.
+
+Data is written to `public/data/` and included in the build output. A GitHub Action (`.github/workflows/refresh-data.yml`) can refresh this data on a weekly schedule — add `GH_TOKEN` (and optionally `GH_API_URL`) as repository secrets.
 
 ### GitHub Enterprise
 

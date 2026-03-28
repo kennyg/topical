@@ -27,8 +27,9 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  define:
-    mode === "development"
+  define: {
+    __DATA_MODE__: JSON.stringify(process.env.DATA_MODE ?? "api"),
+    ...(mode === "development"
       ? {
           __GH_TOKEN__: JSON.stringify(getGhToken()),
           __GH_API_URL__: JSON.stringify(getGhApiUrl()),
@@ -36,5 +37,6 @@ export default defineConfig(({ mode }) => ({
       : {
           __GH_TOKEN__: JSON.stringify(""),
           __GH_API_URL__: JSON.stringify(process.env.GH_API_URL ?? ""),
-        },
+        }),
+  },
 }));

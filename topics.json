@@ -1,0 +1,24 @@
+{
+  "topics": [
+    "react",
+    "typescript",
+    "python",
+    "machine-learning",
+    "rust",
+    "go",
+    "docker",
+    "kubernetes",
+    "cli",
+    "api",
+    "nextjs",
+    "tailwindcss",
+    "graphql",
+    "gh-extension",
+    "vscode",
+    "serverless",
+    "terraform",
+    "deno",
+    "svelte",
+    "wasm"
+  ]
+}

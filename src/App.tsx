@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Link, useNavigate, useSearchParams } from
 import { useState } from "react";
 import { Home } from "./pages/Home";
 import { TopicPage } from "./pages/TopicPage";
+import { isStatic } from "./data";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useRateLimit } from "./hooks";
@@ -67,7 +68,7 @@ function Layout() {
             <span className="text-foreground">topical</span>
           </Link>
           <HeaderSearch />
-          <RateLimitIndicator />
+          {!isStatic && <RateLimitIndicator />}
         </div>
       </header>
 

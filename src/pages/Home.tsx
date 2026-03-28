@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router";
-import { searchTopics, type Topic } from "../github";
+import { searchTopics, getPopularTopics, isStatic, type Topic } from "../data";
 import { useDebounce } from "../hooks";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const POPULAR_TOPICS = [
+const FALLBACK_TOPICS = [
   { name: "react", desc: "JavaScript library for building UIs" },
   { name: "typescript", desc: "Typed superset of JavaScript" },
   { name: "python", desc: "General-purpose programming language" },
@@ -32,8 +32,16 @@ export function Home() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
   const [results, setResults] = useState<Topic[]>([]);
+  const [popularTopics, setPopularTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load popular topics from static data if available
+  useEffect(() => {
+    if (isStatic) {
+      getPopularTopics().then(setPopularTopics).catch(() => {});
+    }
+  }, []);
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -128,7 +136,10 @@ export function Home() {
             Popular topics
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {POPULAR_TOPICS.map((t) => (
+            {(popularTopics.length > 0
+              ? popularTopics.map((t) => ({ name: t.name, desc: t.short_description || t.display_name || t.name }))
+              : FALLBACK_TOPICS
+            ).map((t) => (
               <Link key={t.name} to={`/topics/${t.name}`}>
                 <Card className="bg-card hover:bg-accent hover:border-primary/30 transition-colors cursor-pointer h-full">
                   <CardHeader className="p-4">

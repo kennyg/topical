@@ -1,0 +1,29 @@
+name: Refresh topic data
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Weekly, Monday 6am UTC
+  workflow_dispatch: {} # Manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm fetch-data
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_API_URL: ${{ secrets.GH_API_URL }}
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: refresh topic data"
+          file_pattern: "public/data/**"

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router";
-import { getTopicRepos, searchTopics, type Repository, type Topic } from "../github";
+import { getTopicRepos, searchTopics, type Repository, type Topic } from "../data";
 import { useInfiniteScroll } from "../hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
