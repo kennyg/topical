@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useNavigate, useSearchParams } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Home } from "./pages/Home";
 import { TopicPage } from "./pages/TopicPage";
 import { isStatic } from "./data";
@@ -31,7 +31,12 @@ function RateLimitIndicator() {
 function HeaderSearch() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [input, setInput] = useState(searchParams.get("q") ?? "");
+  const qParam = searchParams.get("q") ?? "";
+  const [input, setInput] = useState(qParam);
+
+  useEffect(() => {
+    setInput(qParam);
+  }, [qParam]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

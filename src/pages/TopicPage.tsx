@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router";
-import { getTopicRepos, searchTopics, type Repository, type Topic } from "../data";
+import { getTopicRepos, searchTopics, type Repository, type Topic, type SortKey } from "../data";
 import { useInfiniteScroll } from "../hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,66 +23,90 @@ function timeAgo(dateStr: string): string {
   return "just now";
 }
 
-const SORT_OPTIONS = [
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "stars", label: "Stars" },
   { key: "forks", label: "Forks" },
   { key: "updated", label: "Updated" },
-] as const;
+];
 
 export function TopicPage() {
   const { name } = useParams<{ name: string }>();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [repos, setRepos] = useState<Repository[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [sort, setSort] = useState("stars");
+  const [sort, setSort] = useState<SortKey>("stars");
   const [language, setLanguage] = useState("");
-  const [page, setPage] = useState(1);
+  const pageRef = useRef(1);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch topic metadata (only depends on name)
   useEffect(() => {
     if (!name) return;
-    setRepos([]);
-    setPage(1);
-    setLoading(true);
-    setError(null);
+    const controller = new AbortController();
+    setTopic(null);
 
-    Promise.all([
-      searchTopics(name).then((d) => {
+    searchTopics(name, controller.signal)
+      .then((d) => {
         const match = d.items.find(
           (t) => t.name.toLowerCase() === name.toLowerCase()
         );
         setTopic(match ?? null);
-      }),
-      getTopicRepos(name, sort, language, 1).then((d) => {
+      })
+      .catch((e) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      });
+
+    return () => controller.abort();
+  }, [name]);
+
+  // Fetch repos (depends on name, sort, language)
+  useEffect(() => {
+    if (!name) return;
+    const controller = new AbortController();
+    setRepos([]);
+    pageRef.current = 1;
+    setLoading(true);
+    setError(null);
+
+    getTopicRepos(name, sort, language, 1, controller.signal)
+      .then((d) => {
         setRepos(d.items);
         setTotalCount(d.total_count);
-      }),
-    ])
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      })
+      .catch((e) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setError(e instanceof Error ? e.message : "Failed to load");
+      })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [name, sort, language]);
 
+  const loadingMoreRef = useRef(false);
+
   const loadMore = useCallback(async () => {
-    if (!name || loadingMore) return;
-    const next = page + 1;
+    if (!name || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
+    const next = pageRef.current + 1;
     try {
       const d = await getTopicRepos(name, sort, language, next);
       setRepos((prev) => [...prev, ...d.items]);
-      setPage(next);
+      pageRef.current = next;
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setError(e instanceof Error ? e.message : "Failed to load more");
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [name, sort, language, page, loadingMore]);
+  }, [name, sort, language]);
 
   const hasMore = repos.length < totalCount;
   const sentinelRef = useInfiniteScroll(loadMore, hasMore && !loadingMore);
 
-  // Aggregate languages from loaded repos
   const topLanguages = useMemo(() => {
     const counts = new Map<string, number>();
     for (const r of repos) {
@@ -94,7 +118,6 @@ export function TopicPage() {
       .map(([lang]) => lang);
   }, [repos]);
 
-  // Aggregate related topics from loaded repos
   const relatedTopics = useMemo(() => {
     const counts = new Map<string, number>();
     const current = name?.toLowerCase() ?? "";
@@ -232,7 +255,6 @@ export function TopicPage() {
         </div>
       )}
 
-      {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} className="h-1" />
       {loadingMore && (
         <div className="flex justify-center py-4">

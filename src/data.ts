@@ -3,14 +3,13 @@ import {
   getTopicRepos as apiGetTopicRepos,
   type Topic,
   type Repository,
+  type SortKey,
 } from "./github";
 
 declare const __DATA_MODE__: string;
 
 const isStatic =
   typeof __DATA_MODE__ !== "undefined" && __DATA_MODE__ === "static";
-
-// --- Static mode types ---
 
 interface TopicIndex {
   topics: Topic[];
@@ -23,8 +22,6 @@ interface TopicRepoFile {
   repos: Repository[];
   generated_at: string;
 }
-
-// --- Static mode cache ---
 
 let topicIndexCache: TopicIndex | null = null;
 const repoCache = new Map<string, TopicRepoFile>();
@@ -47,8 +44,6 @@ async function fetchTopicRepos(topic: string): Promise<TopicRepoFile> {
   return data;
 }
 
-// --- Static mode implementations ---
-
 async function staticSearchTopics(query: string) {
   const index = await fetchTopicIndex();
   const q = query.toLowerCase();
@@ -63,21 +58,19 @@ async function staticSearchTopics(query: string) {
 
 async function staticGetTopicRepos(
   topic: string,
-  sort: string,
+  sort: SortKey,
   language: string,
   page: number
 ) {
   const data = await fetchTopicRepos(topic);
   let repos = [...data.repos];
 
-  // Language filter
   if (language) {
     repos = repos.filter(
       (r) => r.language?.toLowerCase() === language.toLowerCase()
     );
   }
 
-  // Sort
   switch (sort) {
     case "stars":
       repos.sort((a, b) => b.stargazers_count - a.stargazers_count);
@@ -93,7 +86,6 @@ async function staticGetTopicRepos(
       break;
   }
 
-  // Paginate
   const perPage = 30;
   const start = (page - 1) * perPage;
   const paged = repos.slice(start, start + perPage);
@@ -101,24 +93,23 @@ async function staticGetTopicRepos(
   return { total_count: repos.length, items: paged };
 }
 
-// --- Public API (same signatures as github.ts) ---
-
-export type { Topic, Repository } from "./github";
+export type { Topic, Repository, SortKey } from "./github";
 export { onRateLimitChange, type RateLimit } from "./github";
 
-export async function searchTopics(query: string) {
+export async function searchTopics(query: string, signal?: AbortSignal) {
   if (isStatic) return staticSearchTopics(query);
-  return apiSearchTopics(query);
+  return apiSearchTopics(query, signal);
 }
 
 export async function getTopicRepos(
   topic: string,
-  sort: string = "stars",
+  sort: SortKey = "stars",
   language: string = "",
-  page: number = 1
+  page: number = 1,
+  signal?: AbortSignal
 ) {
   if (isStatic) return staticGetTopicRepos(topic, sort, language, page);
-  return apiGetTopicRepos(topic, sort, language, page);
+  return apiGetTopicRepos(topic, sort, language, page, signal);
 }
 
 export async function getPopularTopics(): Promise<Topic[]> {

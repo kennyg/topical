@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type RefObject } from "react";
-import { onRateLimitChange, type RateLimit } from "./github";
+import { onRateLimitChange, type RateLimit } from "./data";
 
 export function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);

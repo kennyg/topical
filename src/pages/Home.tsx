@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { searchTopics, getPopularTopics, isStatic, type Topic } from "../data";
 import { useDebounce } from "../hooks";
@@ -44,27 +44,34 @@ export function Home() {
   }, []);
 
   const debouncedQuery = useDebounce(query, 300);
-
-  const search = useCallback(async (q: string) => {
-    if (!q.trim()) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await searchTopics(q);
-      setResults(data.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Search failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    search(debouncedQuery);
-  }, [debouncedQuery, search]);
+    abortRef.current?.abort();
+
+    if (!debouncedQuery.trim()) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true);
+    setError(null);
+
+    searchTopics(debouncedQuery, controller.signal)
+      .then((data) => {
+        setResults(data.items);
+      })
+      .catch((e) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setError(e instanceof Error ? e.message : "Search failed");
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [debouncedQuery]);
 
   return (
     <div className="space-y-8">
