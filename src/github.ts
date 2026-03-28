@@ -1,4 +1,9 @@
-const GITHUB_API = "https://api.github.com";
+declare const __GH_API_URL__: string;
+
+const GITHUB_API =
+  typeof __GH_API_URL__ !== "undefined" && __GH_API_URL__
+    ? __GH_API_URL__
+    : "https://api.github.com";
 
 export interface Topic {
   name: string;

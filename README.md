@@ -1,73 +1,99 @@
-# React + TypeScript + Vite
+# topical
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Browse GitHub topics and discover repositories — like [github.com/topics](https://github.com/topics) but as a standalone app you can self-host.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Search and browse GitHub topics
+- View top repositories for any topic, sorted by stars/forks/activity
+- Filter by programming language
+- Discover related topics
+- Infinite scroll
+- Rate limit indicator
+- Works with GitHub.com and GitHub Enterprise
 
-## React Compiler
+## Getting started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
 
-## Expanding the ESLint configuration
+- [mise](https://mise.jdx.dev) (installs Node and pnpm automatically)
+- [GitHub CLI](https://cli.github.com/) (`gh`) — used for API auth during local dev
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Setup
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+git clone https://github.com/kennyg/topical.git
+cd topical
+mise trust && mise install
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+pnpm dev
 ```
+
+The dev server auto-detects your `gh` auth token for higher API rate limits (5,000 req/hr vs 60).
+
+### Build
+
+```sh
+pnpm build
+pnpm preview  # preview the production build locally
+```
+
+## Configuration
+
+### Environment variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GH_TOKEN` | GitHub personal access token | Auto-detected from `gh auth token` in dev |
+| `GH_API_URL` | GitHub API base URL | `https://api.github.com` |
+| `GH_HOST` | GitHub Enterprise hostname (alternative to `GH_API_URL`) | — |
+
+### GitHub Enterprise
+
+To use with a GHE instance, set the API URL:
+
+```sh
+# Option A: set the API URL directly
+GH_API_URL=https://github.yourcompany.com/api/v3 pnpm dev
+
+# Option B: set the GH_HOST (also used by gh CLI)
+GH_HOST=github.yourcompany.com pnpm dev
+
+# Option C: for production builds
+GH_API_URL=https://github.yourcompany.com/api/v3 pnpm build
+```
+
+You can also add these to a `.env.local` file:
+
+```sh
+GH_API_URL=https://github.yourcompany.com/api/v3
+GH_TOKEN=ghp_your_token_here
+```
+
+## Deploy to Cloudflare Pages
+
+1. Push to GitHub
+2. Connect the repo in the [Cloudflare Pages dashboard](https://dash.cloudflare.com/)
+3. Set build configuration:
+   - **Build command:** `pnpm build`
+   - **Build output directory:** `dist`
+   - **Node version:** `22`
+4. Optionally set `GH_API_URL` as an environment variable for GHE
+
+SPA routing is handled by `public/_redirects`.
+
+## Tech stack
+
+- [Vite](https://vite.dev/) + [React](https://react.dev/) + TypeScript
+- [shadcn/ui](https://ui.shadcn.com/) + [Tailwind CSS v4](https://tailwindcss.com/)
+- [GitHub REST API](https://docs.github.com/en/rest)
+- [mise](https://mise.jdx.dev/) for toolchain management
+
+## License
+
+MIT
