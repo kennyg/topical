@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(mv * .* ..)",
+      "Bash(rm -rf topical-app)",
+      "Bash(mise trust:*)",
+      "Bash(mise install:*)",
+      "Bash(mise x:*)"
+    ]
+  }
+}
