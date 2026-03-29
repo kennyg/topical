@@ -10,8 +10,8 @@
     "preview": "vite preview",
     "fetch-data": "tsx scripts/fetch-data.ts",
     "build:static": "DATA_MODE=static tsc -b && DATA_MODE=static vite build",
-    "deploy": "wrangler pages deploy dist --project-name topical --branch main",
-    "deploy:preview": "wrangler pages deploy dist --project-name topical --branch preview"
+    "pages": "wrangler pages deploy dist --project-name topical --branch main",
+    "pages:preview": "wrangler pages deploy dist --project-name topical --branch preview"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
