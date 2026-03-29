@@ -37,15 +37,16 @@ export function TopicPage() {
   const [sort, setSort] = useState<SortKey>("stars");
   const [language, setLanguage] = useState("");
   const pageRef = useRef(1);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const prevName = useRef(name);
 
   // Fetch topic metadata (only depends on name)
   useEffect(() => {
     if (!name) return;
     const controller = new AbortController();
-    setTopic(null);
 
     searchTopics(name, controller.signal)
       .then((d) => {
@@ -65,10 +66,18 @@ export function TopicPage() {
   useEffect(() => {
     if (!name) return;
     const controller = new AbortController();
-    setRepos([]);
+    const isNewTopic = name !== prevName.current;
+    prevName.current = name;
     pageRef.current = 1;
-    setLoading(true);
     setError(null);
+
+    if (isNewTopic) {
+      setRepos([]);
+      setTopic(null);
+      setInitialLoading(true);
+    } else {
+      setRefreshing(true);
+    }
 
     getTopicRepos(name, sort, language, 1, controller.signal)
       .then((d) => {
@@ -79,7 +88,10 @@ export function TopicPage() {
         if (e instanceof DOMException && e.name === "AbortError") return;
         setError(e instanceof Error ? e.message : "Failed to load");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setInitialLoading(false);
+        setRefreshing(false);
+      });
 
     return () => controller.abort();
   }, [name, sort, language]);
@@ -134,9 +146,9 @@ export function TopicPage() {
       .map(([topic]) => topic);
   }, [repos, name]);
 
-  if (loading) {
+  if (initialLoading && repos.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-in fade-in duration-300" style={{ animationDelay: "150ms", animationFillMode: "backwards" }}>
         <div className="space-y-2">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-32" />
@@ -159,7 +171,7 @@ export function TopicPage() {
     );
   }
 
-  if (error) {
+  if (error && repos.length === 0) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive text-center">
         {error}
@@ -248,7 +260,7 @@ export function TopicPage() {
       </div>
 
       {repos.length > 0 && (
-        <div className="space-y-2">
+        <div className={`space-y-2 transition-opacity duration-150 ${refreshing ? "opacity-60" : ""}`}>
           {repos.map((repo) => (
             <RepoCard key={repo.id} repo={repo} />
           ))}
