@@ -38,10 +38,12 @@ export function TopicPage() {
   const [language, setLanguage] = useState("");
   const pageRef = useRef(1);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const prevName = useRef(name);
+  const skeletonTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   // Fetch topic metadata (only depends on name)
   useEffect(() => {
@@ -71,10 +73,14 @@ export function TopicPage() {
     pageRef.current = 1;
     setError(null);
 
+    if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
+
     if (isNewTopic) {
       setRepos([]);
       setTopic(null);
       setInitialLoading(true);
+      setShowSkeleton(false);
+      skeletonTimer.current = setTimeout(() => setShowSkeleton(true), 300);
     } else {
       setRefreshing(true);
     }
@@ -89,7 +95,9 @@ export function TopicPage() {
         setError(e instanceof Error ? e.message : "Failed to load");
       })
       .finally(() => {
+        if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
         setInitialLoading(false);
+        setShowSkeleton(false);
         setRefreshing(false);
       });
 
@@ -147,8 +155,9 @@ export function TopicPage() {
   }, [repos, name]);
 
   if (initialLoading && repos.length === 0) {
+    if (!showSkeleton) return null;
     return (
-      <div className="space-y-6 animate-in fade-in duration-300" style={{ animationDelay: "150ms", animationFillMode: "backwards" }}>
+      <div className="space-y-6 animate-in fade-in duration-200">
         <div className="space-y-2">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-32" />
