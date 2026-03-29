@@ -1,4 +1,4 @@
-name: Refresh topic data
+name: Refresh topic data and deploy
 
 on:
   schedule:
@@ -6,10 +6,10 @@ on:
   workflow_dispatch: {} # Manual trigger
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  refresh:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_API_URL: ${{ secrets.GH_API_URL }}
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - run: pnpm build:static
+
+      - uses: cloudflare/wrangler-action@v3
         with:
-          commit_message: "chore: refresh topic data"
-          file_pattern: "public/data/**"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: pages deploy dist --project-name topical --branch main
