@@ -26,26 +26,29 @@ interface TopicRepoFile {
 let topicIndexCache: TopicIndex | null = null;
 const repoCache = new Map<string, TopicRepoFile>();
 
-async function fetchTopicIndex(): Promise<TopicIndex> {
+async function fetchTopicIndex(): Promise<TopicIndex | null> {
   if (topicIndexCache) return topicIndexCache;
   const res = await fetch("/data/topics.json");
-  if (!res.ok) throw new Error("Failed to load topic index");
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!res.ok || !contentType.includes("application/json")) return null;
   topicIndexCache = await res.json();
   return topicIndexCache!;
 }
 
-async function fetchTopicRepos(topic: string): Promise<TopicRepoFile> {
+async function fetchTopicRepos(topic: string): Promise<TopicRepoFile | null> {
   const cached = repoCache.get(topic);
   if (cached) return cached;
   const res = await fetch(`/data/repos/${encodeURIComponent(topic)}.json`);
-  if (!res.ok) throw new Error(`No data for topic: ${topic}`);
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!res.ok || !contentType.includes("application/json")) return null;
   const data: TopicRepoFile = await res.json();
   repoCache.set(topic, data);
   return data;
 }
 
-async function staticSearchTopics(query: string) {
+async function staticSearchTopics(query: string, signal?: AbortSignal) {
   const index = await fetchTopicIndex();
+  if (!index) return apiSearchTopics(query, signal);
   const q = query.toLowerCase();
   const items = index.topics.filter(
     (t) =>
@@ -60,9 +63,11 @@ async function staticGetTopicRepos(
   topic: string,
   sort: SortKey,
   language: string,
-  page: number
+  page: number,
+  signal?: AbortSignal
 ) {
   const data = await fetchTopicRepos(topic);
+  if (!data) return apiGetTopicRepos(topic, sort, language, page, signal);
   let repos = [...data.repos];
 
   if (language) {
@@ -97,7 +102,7 @@ export type { Topic, Repository, SortKey } from "./github";
 export { onRateLimitChange, type RateLimit } from "./github";
 
 export async function searchTopics(query: string, signal?: AbortSignal) {
-  if (isStatic) return staticSearchTopics(query);
+  if (isStatic) return staticSearchTopics(query, signal);
   return apiSearchTopics(query, signal);
 }
 
@@ -108,14 +113,14 @@ export async function getTopicRepos(
   page: number = 1,
   signal?: AbortSignal
 ) {
-  if (isStatic) return staticGetTopicRepos(topic, sort, language, page);
+  if (isStatic) return staticGetTopicRepos(topic, sort, language, page, signal);
   return apiGetTopicRepos(topic, sort, language, page, signal);
 }
 
 export async function getPopularTopics(): Promise<Topic[]> {
   if (isStatic) {
     const index = await fetchTopicIndex();
-    return index.topics;
+    return index?.topics ?? [];
   }
   return [];
 }
