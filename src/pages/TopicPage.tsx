@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router";
 import { getTopicRepos, searchTopics, type Repository, type Topic, type SortKey } from "../data";
+import { useNavigationLoading } from "../loading";
 import { useInfiniteScroll } from "../hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,10 @@ function timeAgo(dateStr: string): string {
   return "just now";
 }
 
+function isAbortError(e: unknown): boolean {
+  return e instanceof DOMException && e.name === "AbortError";
+}
+
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "stars", label: "Stars" },
   { key: "forks", label: "Forks" },
@@ -31,21 +36,19 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 
 export function TopicPage() {
   const { name } = useParams<{ name: string }>();
+  const { startNavigating, stopNavigating } = useNavigationLoading();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [repos, setRepos] = useState<Repository[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [sort, setSort] = useState<SortKey>("stars");
   const [language, setLanguage] = useState("");
   const pageRef = useRef(1);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [showSkeleton, setShowSkeleton] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const prevName = useRef(name);
-  const skeletonTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
-  // Fetch topic metadata (only depends on name)
   useEffect(() => {
     if (!name) return;
     const controller = new AbortController();
@@ -58,13 +61,12 @@ export function TopicPage() {
         setTopic(match ?? null);
       })
       .catch((e) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (!isAbortError(e)) console.error(e);
       });
 
     return () => controller.abort();
   }, [name]);
 
-  // Fetch repos (depends on name, sort, language)
   useEffect(() => {
     if (!name) return;
     const controller = new AbortController();
@@ -73,14 +75,8 @@ export function TopicPage() {
     pageRef.current = 1;
     setError(null);
 
-    if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
-
     if (isNewTopic) {
-      setRepos([]);
-      setTopic(null);
-      setInitialLoading(true);
-      setShowSkeleton(false);
-      skeletonTimer.current = setTimeout(() => setShowSkeleton(true), 300);
+      startNavigating();
     } else {
       setRefreshing(true);
     }
@@ -89,20 +85,22 @@ export function TopicPage() {
       .then((d) => {
         setRepos(d.items);
         setTotalCount(d.total_count);
+        setHasLoaded(true);
       })
       .catch((e) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (isAbortError(e)) return;
         setError(e instanceof Error ? e.message : "Failed to load");
       })
       .finally(() => {
-        if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
-        setInitialLoading(false);
-        setShowSkeleton(false);
+        stopNavigating();
         setRefreshing(false);
       });
 
-    return () => controller.abort();
-  }, [name, sort, language]);
+    return () => {
+      controller.abort();
+      stopNavigating();
+    };
+  }, [name, sort, language, startNavigating, stopNavigating]);
 
   const loadingMoreRef = useRef(false);
 
@@ -116,8 +114,9 @@ export function TopicPage() {
       setRepos((prev) => [...prev, ...d.items]);
       pageRef.current = next;
     } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      setError(e instanceof Error ? e.message : "Failed to load more");
+      if (!isAbortError(e)) {
+        setError(e instanceof Error ? e.message : "Failed to load more");
+      }
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
@@ -154,10 +153,10 @@ export function TopicPage() {
       .map(([topic]) => topic);
   }, [repos, name]);
 
-  if (initialLoading && repos.length === 0) {
-    if (!showSkeleton) return null;
+  // First ever load — show skeleton
+  if (!hasLoaded && repos.length === 0) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200">
+      <div className="space-y-6">
         <div className="space-y-2">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-32" />

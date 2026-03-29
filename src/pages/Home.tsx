@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router";
 import { searchTopics, getPopularTopics, isStatic, type Topic } from "../data";
 import { useDebounce } from "../hooks";
@@ -44,11 +44,8 @@ export function Home() {
   }, []);
 
   const debouncedQuery = useDebounce(query, 300);
-  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    abortRef.current?.abort();
-
     if (!debouncedQuery.trim()) {
       setResults([]);
       setLoading(false);
@@ -56,7 +53,6 @@ export function Home() {
     }
 
     const controller = new AbortController();
-    abortRef.current = controller;
     setLoading(true);
     setError(null);
 

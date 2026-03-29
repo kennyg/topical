@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Home } from "./pages/Home";
 import { TopicPage } from "./pages/TopicPage";
 import { isStatic } from "./data";
+import { LoadingProvider, NavigationProgress } from "./loading";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useRateLimit } from "./hooks";
@@ -62,33 +63,36 @@ function HeaderSearch() {
 
 function Layout() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
-          <Link
-            to="/"
-            className="text-lg font-semibold tracking-tight hover:opacity-80 transition-opacity shrink-0"
-          >
-            <span className="text-primary">#</span>{" "}
-            <span className="text-foreground">topical</span>
-          </Link>
-          <HeaderSearch />
-          {!isStatic && <RateLimitIndicator />}
-        </div>
-      </header>
+    <LoadingProvider>
+      <div className="min-h-screen flex flex-col">
+        <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b relative">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
+            <Link
+              to="/"
+              className="text-lg font-semibold tracking-tight hover:opacity-80 transition-opacity shrink-0"
+            >
+              <span className="text-primary">#</span>{" "}
+              <span className="text-foreground">topical</span>
+            </Link>
+            <HeaderSearch />
+            {!isStatic && <RateLimitIndicator />}
+          </div>
+          <NavigationProgress />
+        </header>
 
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 w-full py-8">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/topics/:name" element={<TopicPage />} />
-        </Routes>
-      </main>
+        <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 w-full py-8">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/topics/:name" element={<TopicPage />} />
+          </Routes>
+        </main>
 
-      <Separator />
-      <footer className="py-6 text-center text-xs text-muted-foreground">
-        Browse GitHub topics &middot; Powered by the GitHub API
-      </footer>
-    </div>
+        <Separator />
+        <footer className="py-6 text-center text-xs text-muted-foreground">
+          Browse GitHub topics &middot; Powered by the GitHub API
+        </footer>
+      </div>
+    </LoadingProvider>
   );
 }
 
