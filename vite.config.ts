@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
       __GH_TOKEN__: JSON.stringify(""),
     },
     server: {
+      allowedHosts: process.env.VITE_ALLOWED_HOSTS?.split(",") || true,
       proxy: mode === "development"
         ? {
             "/ghapi": {
